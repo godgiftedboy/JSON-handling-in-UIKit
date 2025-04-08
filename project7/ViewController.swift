@@ -9,7 +9,7 @@ import UIKit
 
 class ViewController: UITableViewController {
     var petitions = [Petition]()
-    
+    var filteredPetitions = [Petition]()
     func parse(json: Data) {
         let decoder = JSONDecoder()
 
@@ -29,6 +29,38 @@ class ViewController: UITableViewController {
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
     }
+    
+    @objc func showFilter() {
+        let ac = UIAlertController(title: "Filter Petitions", message: nil, preferredStyle: .alert)
+        ac.addTextField();
+        let submitAction = UIAlertAction(title: "Submit", style: .default) {
+            //Both ViewController and AlertController are referenced inside our closure.
+            //So, weak reference should be indicated.
+        
+            [weak self, weak ac] action in
+            guard let answer = ac?.textFields?[0].text else { return } // AlertController referenced (ac)
+            self?.submit(answer) // ViewController referenced (self)
+            
+            //So, question marks (?.) are there due to weak references established.
+        }
+
+        ac.addAction(submitAction)
+        present(ac, animated: true)
+    }
+    
+    func submit(_ answer: String){
+        
+           // You can also Create the regex pattern from the user input
+            //here i am simply using the word
+           
+               filteredPetitions = petitions.filter {
+                   $0.title.contains(answer)
+               }
+              
+               tableView.reloadData()
+           
+        
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,6 +68,7 @@ class ViewController: UITableViewController {
         let urlString: String
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .bookmarks, target: self, action: #selector(showCredits));
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .search, target: self, action: #selector(showFilter));
 
         if navigationController?.tabBarItem.tag == 0 {
             // urlString = "https://api.whitehouse.gov/v1/petitions.json?limit=100"
@@ -57,12 +90,13 @@ class ViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return petitions.count;
+        return filteredPetitions.isEmpty ? petitions.count : filteredPetitions.count;
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        let petition = petitions[indexPath.row]
+        
+        let petition = filteredPetitions.isEmpty ? petitions[indexPath.row] : filteredPetitions[indexPath.row]
         cell.textLabel?.text = petition.title
         cell.detailTextLabel?.text = petition.body
         return cell
@@ -71,7 +105,7 @@ class ViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let vc = DetailViewController()
-        vc.detailItem = petitions[indexPath.row]
+        vc.detailItem = filteredPetitions.isEmpty ? petitions[indexPath.row] : filteredPetitions[indexPath.row]
         navigationController?.pushViewController(vc, animated: true)
     }
 
