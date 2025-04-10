@@ -15,17 +15,16 @@ class ViewController: UITableViewController {
 
         if let jsonPetitions = try? decoder.decode(Petitions.self, from: json) {
             petitions = jsonPetitions.results
-            DispatchQueue.main.async { [weak self] in
-                self?.tableView.reloadData()
-            }
-            
+            tableView.performSelector(onMainThread: #selector(UITableView.reloadData), with: nil, waitUntilDone: false);
+        }else{
+            performSelector(onMainThread: #selector(showError), with: nil, waitUntilDone: false)
         }
     }
-    func showError() {
+    @objc func showError() {
         DispatchQueue.main.async {[weak self] in
             let ac = UIAlertController(title: "Loading error", message: "There was a problem loading the feed; please check your connection and try again.", preferredStyle: .alert)
             ac.addAction(UIAlertAction(title: "OK", style: .default))
-            self?.present(ac, animated: true)
+            self?.present(ac, animated: true)  
         }
         
     }
@@ -67,14 +66,9 @@ class ViewController: UITableViewController {
            
         
     }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
+    
+    @objc func fetchJson (){
         let urlString: String
-        
-        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .bookmarks, target: self, action: #selector(showCredits));
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .search, target: self, action: #selector(showFilter));
 
         if navigationController?.tabBarItem.tag == 0 {
             // urlString = "https://api.whitehouse.gov/v1/petitions.json?limit=100"
@@ -83,22 +77,23 @@ class ViewController: UITableViewController {
             // urlString = "https://api.whitehouse.gov/v1/petitions.json?signatureCountFloor=10000&limit=100"
             urlString = "https://www.hackingwithswift.com/samples/petitions-2.json"
         }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            [weak self] in
-            if let url = URL(string: urlString) {
-                if let data = try? Data(contentsOf: url) {
-                    self?.parse(json: data)
-                    return
-                }
-            }
-            self?.showError()
             
+        if let url = URL(string: urlString) {
+            if let data = try? Data(contentsOf: url) {
+                parse(json: data)
+                return
+            }
         }
-       
-
+        performSelector(onMainThread: #selector(showError), with: nil, waitUntilDone: false);
         
-       
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .bookmarks, target: self, action: #selector(showCredits));
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .search, target: self, action: #selector(showFilter));
+        
+        performSelector(inBackground: #selector(fetchJson), with: nil);
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
